@@ -2,9 +2,12 @@
 
 const Hapi = require('hapi');
 const pg = require('pg');
+const request = require('request');
 
-const server = new Hapi.server();
-server.connection({port: 8080});
+//put postgres username and pass here
+
+const server = new Hapi.Server();
+server.connection({port: 3000});
 
 //Create a new user
 server.route({
@@ -61,11 +64,27 @@ server.route({
 	}
 });
 
-server.start((err) => {
-	if (err) {
-		throw err;
+//Given movie title and optionally the year return info from OMDb
+server.route({
+	method: 'GET',
+	path: '/movie/{title}/{year?}',
+	handler: function (req, reply) {
+		const year = req.params.year ? encodeURIComponent(req.params.year) : '';
+		const title = encodeURIComponent(req.params.title);
+		var reqString = 'http://www.omdbapi.com/?t=' + title + '/' + year;
+		request(reqString, function (error, response, body) {
+			if (!error && response.statusCode == 200) {
+    			reply(body);
+  			}
+		});
 	}
-	
-	console.log('server running at: ', server.info.uri);
+});
+
+server.start((err) => {
+
+    if (err) {
+        throw err;
+    }
+    console.log('Server running at:', server.info.uri);
 });
 
