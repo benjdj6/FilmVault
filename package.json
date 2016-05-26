@@ -1,0 +1,14 @@
+{
+  "name": "filmster",
+  "version": "1.0.0",
+  "description": "Film info API",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ben Johnston",
+  "license": "ISC",
+  "dependencies": {
+    "hapi": "^13.3.0"
+  }
+}
