@@ -166,6 +166,44 @@ server.route({
 	}
 });
 
+server.route({
+	method: 'DELETE',
+	path: '/lists/{username}/{listname}/{imdb_ID}',
+	handler: function(request, reply) {
+		//DO AUTH
+		const username = encodeURIComponent(request.params.username);
+		const listname = encodeURIComponent(request.params.listname);
+		const imdb_ID = encodeURIComponent(request.params.imdb_ID);
+		pool.connect(function(err, client, done) {
+		  	if(err) {
+		    	return console.error('error fetching client from pool', err);
+		  	}
+			client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', [username, listname, imdb_ID]);
+			reply("Film " + imdb_ID + " Successfully Deleted From " + listname);
+			done();
+		});
+	}
+});
+
+//Delete a film list
+server.route({
+	method: 'DELETE',
+	path: '/lists/{username}/{listname}',
+	handler: function(request, reply) {
+		//DO AUTH
+		const username = encodeURIComponent(request.params.username);
+		const listname = encodeURIComponent(request.params.listname);
+		pool.connect(function(err, client, done) {
+		  	if(err) {
+		    	return console.error('error fetching client from pool', err);
+		  	}
+			client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2', [username, listname]);
+			reply("Film List " + listname + " Successfully Deleted");
+			done();
+		});
+	}
+});
+
 //Generate api token, pass in username and password
 //token will be hash, stored in tokens table, using redis
 //PROBABLY DELETE
