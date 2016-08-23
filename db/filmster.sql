@@ -10,8 +10,9 @@ CREATE TABLE tokens (
 );
 
 CREATE TABLE film_lists (
+	list_id 	serial,
 	username	text REFERENCES users (username),
 	list_name	text,
 	imdb_ID		text,
-	CONSTRAINT list_id PRIMARY KEY(username,list_name)
+	CONSTRAINT list_id PRIMARY KEY(imdb_ID,list_id)
 );

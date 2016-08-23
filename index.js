@@ -5,7 +5,7 @@
 
 const Hapi = require('hapi');
 const pg = require('pg');
-const request = require('request');
+const req = require('request');
 const config = require('./config');
 const redis = require('redis');
 const crypto = require('crypto');
@@ -36,6 +36,110 @@ function genToken() {
   		});
 		//put hashed token in redis store and tokens table, email token to address provided
 		return htoken;
+	});
+}
+
+//Hashes token, finds it in Redis and identifies user
+function verify(token, username, callback) {
+	const hash = crypto.createHash('md5');
+ 	var args = arguments;
+ 	var reply = args[4];
+	pool.connect(function(err, client, done) {
+		if(err) {
+	    	return console.error('error fetching client from pool', err);
+	  	}
+	  	var htoken;
+	  	hash.update(token);
+	  	htoken = hash.digest('hex');
+	  	client.query('SELECT username FROM tokens WHERE token_hash = $1', 
+		  	[htoken], function(err, result) {
+		    //call `done()` to release the client back to the pool
+			    if(err) {
+			      	return console.error('error running query', err);
+			    }
+		  		if(result.rows[0]) {
+		  			callback(result.rows[0].username, username, args[3], args[4], args[5]);
+		    	}
+		    	else {
+					reply("Invalid Token");
+				}
+				done();
+			});
+	 });
+}
+
+//Checks if list exists, if not creates list using username and data in payload
+function makeList(target, writer, payload, reply) {
+  	var responseStr = "";
+  	pool.connect(function(err, client, done) {
+		if(err) {
+	    	return console.error('error fetching client from pool', err);
+	  	}
+  		client.query('SELECT * FROM film_lists WHERE username = $1 AND list_name = $2', 
+	  		[target, payload.listname], function(err, result) {
+		    //call `done()` to release the client back to the pool
+		    if(err) {
+		      	return console.error('error running query', err);
+		    }
+		    if(target != writer) {
+		    	responseStr = "Permission Denied."
+		    }
+	  		else if(result.rows[0]) {
+	    		responseStr = "List " + payload.listname + " already exists";
+	    	}
+	    	else {
+				client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
+					[target, payload.listname, payload.imdb_ID]);
+				responseStr = payload.listname + " successfully created containing " + payload.imdb_ID;
+			}
+			reply(responseStr);
+		});
+		done();
+  	});
+}
+
+function addFilm(target, writer, listname, payload, reply) {
+/*	pool.connect(function(err, client, done) {
+	  	if(err) {
+	    	return console.error('error fetching client from pool', err);
+	  	}
+	  	var responseStr = "";
+	  	client.query('SELECT * FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', 
+	  		[username, listname, payload.imdb_ID], function(err, result) {
+	    	//call `done()` to release the client back to the pool
+	    	if(err) {
+	      		return console.error('error running query', err);
+	    	}
+	    	if(result.rows[0]) {
+	    		responseStr = "Movie: " + payload.imdb_ID + " already exists in list " + listname;
+	    	}
+	    	else {
+	    		client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
+					[username, listname, payload.imdb_ID]);
+	    		responseStr = imdb_ID + " successfully added to list " + listname;
+	    	}
+	    	done();
+	    	reply(responseStr);
+		});
+	});*/
+}
+
+function deleteList(username, listname, reply) {
+	reply("coolio");
+}
+
+function deleteFilm(target, writer, listname, movie, reply) {
+	pool.connect(function(err, client, done) {
+	  	if(err) {
+	    	return console.error('error fetching client from pool', err);
+	  	}
+	  	if(target == writer) {
+		    reply("Permission Denied.");
+		    return;
+		}
+		client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', [username, listname, imdb_ID]);
+		reply("Film " + imdb_ID + " Successfully Deleted From " + listname);
+		done();
 	});
 }
 
@@ -135,7 +239,6 @@ server.route({
 		  	client.query('SELECT imdb_ID FROM film_lists WHERE username = $1 AND list_name = $2', [username, listname], function(err, result) {
 		    	//call `done()` to release the client back to the pool
 		    	done();
-
 		    	if(err) {
 		      		return console.error('error running query', err);
 		    	}
@@ -145,24 +248,53 @@ server.route({
 	}
 });
 
-//Create a new list {newlist}
+//Create a new list {list_name} with entry {imdb_ID} from body
+//Lists must have at least one entry to exist
 server.route({
 	method: 'POST',
-	path: '/lists/{newlist}',
+	path: '/lists/{username}',
 	handler: function (request, reply) {
 		//Go to Redis for rate limiting stuff
 		const authorization = request.query.token;
 		console.log(authorization.length);
-		reply("Hello!");
+		const username = encodeURIComponent(request.params.username);
+		var payload = request.payload;
+		verify(authorization, username, makeList, payload, reply);
 	}
 });
 
 //Add film to existing film list
 server.route({
 	method: 'PUT',
-	path: '/lists/{listname}',
+	path: '/lists/{username}/{listname}',
 	handler: function(request, reply) {
-		reply('Confirm addition of film into list');
+		const username = encodeURIComponent(request.params.username);
+		const listname = encodeURIComponent(request.params.listname);
+		var payload = request.payload;
+		verify(username, listname, payload);
+		/**pool.connect(function(err, client, done) {
+		  	if(err) {
+		    	return console.error('error fetching client from pool', err);
+		  	}
+		  	var responseStr = "";
+		  	client.query('SELECT * FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', 
+		  		[username, listname, payload.imdb_ID], function(err, result) {
+		    	//call `done()` to release the client back to the pool
+		    	if(err) {
+		      		return console.error('error running query', err);
+		    	}
+		    	if(result.rows[0]) {
+		    		responseStr = "Movie: " + payload.imdb_ID + " already exists in list " + listname;
+		    	}
+		    	else {
+		    		client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
+						[username, listname, payload.imdb_ID]);
+		    		responseStr = imdb_ID + " successfully added to list " + listname;
+		    	}
+		    	done();
+		    	reply(responseStr);
+			});
+		});**/
 	}
 });
 
@@ -174,14 +306,7 @@ server.route({
 		const username = encodeURIComponent(request.params.username);
 		const listname = encodeURIComponent(request.params.listname);
 		const imdb_ID = encodeURIComponent(request.params.imdb_ID);
-		pool.connect(function(err, client, done) {
-		  	if(err) {
-		    	return console.error('error fetching client from pool', err);
-		  	}
-			client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', [username, listname, imdb_ID]);
-			reply("Film " + imdb_ID + " Successfully Deleted From " + listname);
-			done();
-		});
+		verify(token, username, deleteFilm, listname, imdb_ID);
 	}
 });
 
@@ -204,27 +329,15 @@ server.route({
 	}
 });
 
-//Generate api token, pass in username and password
-//token will be hash, stored in tokens table, using redis
-//PROBABLY DELETE
-server.route({
-	method: 'POST',
-	path: '/newtoken',
-	handler: function (request, reply) {
-		reply('TOKEN HERE');
-	}
-});
-
 //Given movie title and optionally the year return info from OMDb
-//TODO: Cache it(?)
 server.route({
 	method: 'GET',
 	path: '/movie/{title}/{year?}',
-	handler: function (req, reply) {
-		const year = req.params.year ? encodeURIComponent(req.params.year) : '';
-		const title = encodeURIComponent(req.params.title);
-		var reqString = 'http://www.omdbapi.com/?t=' + title + '/' + year;
-		request(reqString, function (error, response, body) {
+	handler: function (request, reply) {
+		const year = request.params.year ? encodeURIComponent(request.params.year) : '';
+		const title = encodeURIComponent(request.params.title);
+		var reqString = 'https://www.omdbapi.com/?t=' + title + '/' + year;
+		req(reqString, function (error, response, body) {
 			if (!error && response.statusCode == 200) {
     			reply(body);
   			}
