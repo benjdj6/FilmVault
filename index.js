@@ -99,33 +99,50 @@ function makeList(target, writer, payload, reply) {
 }
 
 function addFilm(target, writer, listname, payload, reply) {
-/*	pool.connect(function(err, client, done) {
+	pool.connect(function(err, client, done) {
 	  	if(err) {
 	    	return console.error('error fetching client from pool', err);
 	  	}
 	  	var responseStr = "";
-	  	client.query('SELECT * FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', 
-	  		[username, listname, payload.imdb_ID], function(err, result) {
-	    	//call `done()` to release the client back to the pool
-	    	if(err) {
-	      		return console.error('error running query', err);
-	    	}
-	    	if(result.rows[0]) {
-	    		responseStr = "Movie: " + payload.imdb_ID + " already exists in list " + listname;
-	    	}
-	    	else {
-	    		client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
-					[username, listname, payload.imdb_ID]);
-	    		responseStr = imdb_ID + " successfully added to list " + listname;
-	    	}
-	    	done();
-	    	reply(responseStr);
-		});
-	});*/
+	  	if(target != writer) {
+	  		responseStr = "Permission Denied.";
+	  	}
+	  	else {
+		  	client.query('SELECT * FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', 
+		  		[username, listname, payload.imdb_ID], function(err, result) {
+		    	//call `done()` to release the client back to the pool
+		    	if(err) {
+		      		return console.error('error running query', err);
+		    	}
+		    	if(result.rows[0]) {
+		    		responseStr = "Movie: " + payload.imdb_ID + " already exists in list " + listname;
+		    	}
+		    	else {
+		    		client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
+						[username, listname, payload.imdb_ID]);
+		    		responseStr = imdb_ID + " successfully added to list " + listname;
+		    	}
+			});
+		}
+		done();
+		reply(responseStr);
+	});
 }
 
-function deleteList(username, listname, reply) {
-	reply("coolio");
+function deleteList(target, username, listname, reply) {
+	pool.connect(function(err, client, done) {
+	  	if(err) {
+	    	return console.error('error fetching client from pool', err);
+	  	}
+	  	if(target != writer) {
+			reply("Permission Denied.");
+		}
+		else {
+			client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2', [username, listname]);
+			reply("Film List " + listname + " Successfully Deleted");
+		}
+		done();
+	});
 }
 
 function deleteFilm(target, writer, listname, movie, reply) {
@@ -133,7 +150,7 @@ function deleteFilm(target, writer, listname, movie, reply) {
 	  	if(err) {
 	    	return console.error('error fetching client from pool', err);
 	  	}
-	  	if(target == writer) {
+	  	if(target != writer) {
 		    reply("Permission Denied.");
 		    return;
 		}
@@ -270,31 +287,9 @@ server.route({
 	handler: function(request, reply) {
 		const username = encodeURIComponent(request.params.username);
 		const listname = encodeURIComponent(request.params.listname);
+		const authorization = request.query.token;
 		var payload = request.payload;
-		verify(username, listname, payload);
-		/**pool.connect(function(err, client, done) {
-		  	if(err) {
-		    	return console.error('error fetching client from pool', err);
-		  	}
-		  	var responseStr = "";
-		  	client.query('SELECT * FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', 
-		  		[username, listname, payload.imdb_ID], function(err, result) {
-		    	//call `done()` to release the client back to the pool
-		    	if(err) {
-		      		return console.error('error running query', err);
-		    	}
-		    	if(result.rows[0]) {
-		    		responseStr = "Movie: " + payload.imdb_ID + " already exists in list " + listname;
-		    	}
-		    	else {
-		    		client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
-						[username, listname, payload.imdb_ID]);
-		    		responseStr = imdb_ID + " successfully added to list " + listname;
-		    	}
-		    	done();
-		    	reply(responseStr);
-			});
-		});**/
+		verify(authorization, username, addFilm, listname, payload, reply);
 	}
 });
 
@@ -306,7 +301,8 @@ server.route({
 		const username = encodeURIComponent(request.params.username);
 		const listname = encodeURIComponent(request.params.listname);
 		const imdb_ID = encodeURIComponent(request.params.imdb_ID);
-		verify(token, username, deleteFilm, listname, imdb_ID);
+		const authorization = request.query.token;
+		verify(authorization, username, deleteFilm, listname, imdb_ID, reply);
 	}
 });
 
@@ -318,14 +314,8 @@ server.route({
 		//DO AUTH
 		const username = encodeURIComponent(request.params.username);
 		const listname = encodeURIComponent(request.params.listname);
-		pool.connect(function(err, client, done) {
-		  	if(err) {
-		    	return console.error('error fetching client from pool', err);
-		  	}
-			client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2', [username, listname]);
-			reply("Film List " + listname + " Successfully Deleted");
-			done();
-		});
+		const authorization = request.query.token;
+		verify(authorization, username, deleteList, listname, reply);
 	}
 });
 
