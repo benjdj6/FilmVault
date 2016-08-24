@@ -9,6 +9,7 @@ const req = require('request');
 const config = require('./config');
 const redis = require('redis');
 const crypto = require('crypto');
+const Boom = require('boom');
 //put postgres username and pass here
 
 var client = new pg.Client();
@@ -135,13 +136,14 @@ function deleteList(target, username, listname, reply) {
 	    	return console.error('error fetching client from pool', err);
 	  	}
 	  	if(target != writer) {
-			reply("Permission Denied.");
+	  		done();
+			return reply(Boom.badRequest('Permission Denied'));
 		}
 		else {
 			client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2', [username, listname]);
 			reply("Film List " + listname + " Successfully Deleted");
+			done();
 		}
-		done();
 	});
 }
 
@@ -151,8 +153,7 @@ function deleteFilm(target, writer, listname, movie, reply) {
 	    	return console.error('error fetching client from pool', err);
 	  	}
 	  	if(target != writer) {
-		    reply("Permission Denied.");
-		    return;
+		    return reply(Boom.badRequest('Permission Denied'));
 		}
 		client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', [username, listname, imdb_ID]);
 		reply("Film " + imdb_ID + " Successfully Deleted From " + listname);
