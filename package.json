@@ -1,6 +1,6 @@
 {
-  "name": "filmster",
-  "version": "1.0.0",
+  "name": "filmvault",
+  "version": "0.6.0",
   "description": "Film info API",
   "main": "index.js",
   "scripts": {
@@ -9,6 +9,34 @@
   "author": "Ben Johnston",
   "license": "ISC",
   "dependencies": {
-    "hapi": "^13.3.0"
-  }
+    "hapi": "^13.3.0",
+    "crypto": "^0.0.3",
+    "hapi-require-https": "^2.0.7",
+    "boom": "^3.2.2",
+    "redis": "^2.6.2",
+    "pg-native": "^1.10.0",
+    "pg": "^6.0.3",
+    "request": "^2.72.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benjdj6/FilmVault.git"
+  },
+  "keywords": [
+    "film",
+    "tv",
+    "filmvault",
+    "ben",
+    "johnston",
+    "manage",
+    "list",
+    "postgres",
+    "api",
+    "hapi"
+  ],
+  "bugs": {
+    "url": "https://github.com/benjdj6/FilmVault/issues"
+  },
+  "homepage": "https://github.com/benjdj6/FilmVault#readme"
 }
