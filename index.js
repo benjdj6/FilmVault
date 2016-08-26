@@ -59,10 +59,10 @@ function verify(token, username, callback) {
 			      	return console.error('error running query', err);
 			    }
 		  		if(result.rows[0]) {
-		  			callback(result.rows[0].username, username, args[3], args[4], args[5]);
+		  			callback(username, result.rows[0].username, args[3], args[4], args[5]);
 		    	}
 		    	else {
-					return reply(Boom.unauthorized("Invalid Token"));
+					return reply(Boom.unauthorized("Invalid Token Provided"));
 				}
 				done();
 			});
@@ -168,7 +168,6 @@ server.route({
 		const hash = crypto.createHash('md5');
 		var payload = request.payload;
 		var htoken;
-		var response = "";
 		crypto.randomBytes(24, function(err, buffer) {
 			var token = buffer.toString('hex');
 			hash.update(token);
@@ -185,13 +184,13 @@ server.route({
 		  			if(result.rows[0]) {
 		  				var data = result.rows[0]
 		  				if(data.username == payload.username && data.email == payload.email) {
-		  					response = "Username and Email already in use. Please try another!";
+		  					return reply(Boom.conflict("Username and Email already in use. Please try another!"));
 		  				}
 		  				else if(data.username == payload.username) {
-		  					response = "Username already in use. Please try another!";
+		  					return reply(Boom.conflict("Username already in use. Please try another!"));
 		  				}
 		  				else if(data.email == payload.email) {
-		  					response = "Email already in use. Please try another!";
+		  					return reply(Boom.conflict("Email already in use. Please try another!"));
 		  				}
 		  				else if(data.token_hash == htoken) {
 		  					htoken = genToken();
@@ -202,11 +201,10 @@ server.route({
 		  					[payload.username, payload.email]);
 	  					client.query('INSERT INTO tokens(token_hash, username) values($1, $2)', 
 	  						[htoken, payload.username]);
-		  				response = "Account created, check your email for your token!"
+		  				return reply("Account created, check your email for your token!");
+		  				//TODO SEND EMAIL HERE
 		  			}
-		  			console.log(response);
 		  			console.log(token);
-		  			reply(response);
 		  			done();
 	  			});
 				//put hashed token in redis store, email token to address provided

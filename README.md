@@ -8,12 +8,12 @@ Verification of writer/user for *makeList*, *addFilm*, *deleteFilm*, *deleteList
 All endpoints/routes currently work
 Not Working
 ===========
-Improper status codes/responses
-
 Token duplicate check is broken
+
+Send Email With Token
 To Do
 =====
-Fix status codes so returns 400 & 500 where appropriate - Sev 1
+Send Email With Token - Sev 1
 
 Connect HTTPS certs - Sev 2
 
