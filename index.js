@@ -62,7 +62,7 @@ function verify(token, username, callback) {
 		  			callback(result.rows[0].username, username, args[3], args[4], args[5]);
 		    	}
 		    	else {
-					reply("Invalid Token");
+					return reply(Boom.unauthorized("Invalid Token"));
 				}
 				done();
 			});
@@ -83,7 +83,7 @@ function makeList(target, writer, payload, reply) {
 		      	return console.error('error running query', err);
 		    }
 		    if(target != writer) {
-		    	responseStr = "Permission Denied."
+		    	return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
 		    }
 	  		else if(result.rows[0]) {
 	    		responseStr = "List " + payload.listname + " already exists";
@@ -104,9 +104,8 @@ function addFilm(target, writer, listname, payload, reply) {
 	  	if(err) {
 	    	return console.error('error fetching client from pool', err);
 	  	}
-	  	var responseStr = "";
 	  	if(target != writer) {
-	  		responseStr = "Permission Denied.";
+	  		return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
 	  	}
 	  	else {
 		  	client.query('SELECT * FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', 
@@ -121,12 +120,11 @@ function addFilm(target, writer, listname, payload, reply) {
 		    	else {
 		    		client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
 						[username, listname, payload.imdb_ID]);
-		    		responseStr = imdb_ID + " successfully added to list " + listname;
+		    		return reply(imdb_ID + " successfully added to list " + listname);
 		    	}
 			});
 		}
 		done();
-		reply(responseStr);
 	});
 }
 
@@ -137,7 +135,7 @@ function deleteList(target, username, listname, reply) {
 	  	}
 	  	if(target != writer) {
 	  		done();
-			return reply(Boom.badRequest('Permission Denied'));
+			return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
 		}
 		else {
 			client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2', [username, listname]);
@@ -153,7 +151,7 @@ function deleteFilm(target, writer, listname, movie, reply) {
 	    	return console.error('error fetching client from pool', err);
 	  	}
 	  	if(target != writer) {
-		    return reply(Boom.badRequest('Permission Denied'));
+		    return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
 		}
 		client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', [username, listname, imdb_ID]);
 		reply("Film " + imdb_ID + " Successfully Deleted From " + listname);
