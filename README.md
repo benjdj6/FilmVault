@@ -17,7 +17,7 @@ Send Email With Token - Sev 1
 
 Connect HTTPS certs - Sev 2
 
-Fix responses to be JSON - Sev 2
+Fix responses to all be JSON - Sev 2
 
 Deploy to AWS - Sev 2
 

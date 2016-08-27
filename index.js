@@ -1,8 +1,5 @@
 'use strict';
 
-//TODO: Drop/recreate user table
-//Drop token table
-
 const Hapi = require('hapi');
 const pg = require('pg');
 const req = require('request');
@@ -14,7 +11,12 @@ const Boom = require('boom');
 
 var client = new pg.Client();
 var pool = new pg.Pool(config);
-//find way to connect to db in separate function and still use handleError
+
+var redis_client = redis.createClient();
+
+redis_client.on("error", function (err) {
+    console.log("Error " + err);
+});
 
 const server = new Hapi.Server();
 server.connection({port: 3000});
