@@ -22,11 +22,11 @@ redis_client.on("error", function (err) {
 const server = new Hapi.Server();
 server.connection({
 	port: 3000,
-	/**tls: {
-		key: fs.readFileSync(path.join(__dirname, 'tls/ssl/filmvault.pem'), 'utf8'),
-		cert: fs.readFileSync(path.join(__dirname, 'tls/certs/filmvaultcert.pem'), 'utf8'),
+	tls: {
+		key: fs.readFileSync(path.join(__dirname, 'filmvault.key'), 'utf8'),
+		cert: fs.readFileSync(path.join(__dirname, 'filmvault.crt'), 'utf8'),
 		rejectUnauthorized: false
-  	}**/
+  	}
 });
 
 function genToken() {
