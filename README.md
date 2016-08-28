@@ -10,10 +10,10 @@ Not Working
 ===========
 Token duplicate check is slow
 
-Send Email With Token
+Send token in proper response
 To Do (1-most severe 5-least severe)
 ====================================
-Send Email With Token - Sev 1
+Send token - Sev 1
 
 Connect HTTPS certs - Sev 2
 
@@ -24,6 +24,8 @@ Deploy to AWS - Sev 2
 Token duplicate check callback restructure - Sev 4
 
 Clean up comments - Sev 5
+
+Finish Documentation - Sev 5
 Credit
 ======
 This project uses the [OMDb API created by Brian Fritz](http://www.omdbapi.com) licensed under [Creative Commons License 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
