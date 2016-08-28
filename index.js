@@ -37,7 +37,7 @@ function genToken() {
   				htoken = genToken();
   			}
   		});
-		//put hashed token in redis store and tokens table, email token to address provided
+		//email token to address provided
 		return htoken;
 	});
 }
@@ -47,28 +47,41 @@ function verify(token, username, callback) {
 	const hash = crypto.createHash('md5');
  	var args = arguments;
  	var reply = args[4];
-	pool.connect(function(err, client, done) {
-		if(err) {
-	    	return console.error('error fetching client from pool', err);
-	  	}
-	  	var htoken;
-	  	hash.update(token);
-	  	htoken = hash.digest('hex');
-	  	client.query('SELECT username FROM tokens WHERE token_hash = $1', 
-		  	[htoken], function(err, result) {
-		    //call `done()` to release the client back to the pool
-			    if(err) {
-			      	return console.error('error running query', err);
-			    }
-		  		if(result.rows[0]) {
-		  			callback(username, result.rows[0].username, args[3], args[4], args[5]);
-		    	}
-		    	else {
-					return reply(Boom.unauthorized("Invalid Token Provided"));
-				}
-				done();
-			});
-	 });
+  	var ts = (new Date).getTime();
+  	var htoken;
+  	hash.update(token);
+  	htoken = hash.digest('hex');
+  	redis_client.get(htoken, function(err, replies) {
+  		console.log(replies);
+  		if(replies != NaN && replies > 15) {
+  			return reply(Boom.tooManyRequests("You are making too many requests, please try again in a couple seconds."));
+  		}
+  		else {
+  			var multi = redis_client.multi();
+  			multi.incr(htoken, redis.print);
+  			multi.expire(htoken, 10);
+  			multi.exec(function(err, replies) {
+  				pool.connect(function(err, client, done) {
+					if(err) {
+    					return console.error('error fetching client from pool', err);
+  					}
+  					client.query('SELECT username FROM tokens WHERE token_hash = $1', 
+					  	[htoken], function(err, result) {
+					    if(err) {
+					      	return console.error('error running query', err);
+					    }
+				  		if(result.rows[0]) {
+				  			callback(username, result.rows[0].username, args[3], args[4], args[5]);
+				    	}
+				    	else {
+							return reply(Boom.unauthorized("Invalid Token Provided"));
+						}
+						done();
+					});
+  				});
+  			});
+  		}
+ 	});
 }
 
 //Checks if list exists, if not creates list using username and data in payload
