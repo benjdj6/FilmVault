@@ -7,7 +7,8 @@ const config = require('./config');
 const redis = require('redis');
 const crypto = require('crypto');
 const Boom = require('boom');
-//put postgres username and pass here
+const fs = require('fs');
+const path = require('path');
 
 var client = new pg.Client();
 var pool = new pg.Pool(config);
@@ -19,7 +20,14 @@ redis_client.on("error", function (err) {
 });
 
 const server = new Hapi.Server();
-server.connection({port: 3000});
+server.connection({
+	port: 3000,
+	/**tls: {
+		key: fs.readFileSync(path.join(__dirname, 'tls/ssl/filmvault.pem'), 'utf8'),
+		cert: fs.readFileSync(path.join(__dirname, 'tls/certs/filmvaultcert.pem'), 'utf8'),
+		rejectUnauthorized: false
+  	}**/
+});
 
 function genToken() {
 	const hash = crypto.createHash('md5');
@@ -32,12 +40,10 @@ function genToken() {
     		if(err) {
       			return console.error('error running query', err);
     		}
-  			console.log(result.rows[0]);
   			if(result.rows[0]) {
   				htoken = genToken();
   			}
   		});
-		//email token to address provided
 		return htoken;
 	});
 }
@@ -52,7 +58,6 @@ function verify(token, username, callback) {
   	hash.update(token);
   	htoken = hash.digest('hex');
   	redis_client.get(htoken, function(err, replies) {
-  		console.log(replies);
   		if(replies != NaN && replies > 15) {
   			return reply(Boom.tooManyRequests("You are making too many requests, please try again in a couple seconds."));
   		}
@@ -93,7 +98,6 @@ function makeList(target, writer, payload, reply) {
 	  	}
   		client.query('SELECT * FROM film_lists WHERE username = $1 AND list_name = $2', 
 	  		[target, payload.listname], function(err, result) {
-		    //call `done()` to release the client back to the pool
 		    if(err) {
 		      	return console.error('error running query', err);
 		    }
@@ -125,7 +129,6 @@ function addFilm(target, writer, listname, payload, reply) {
 	  	else {
 		  	client.query('SELECT * FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', 
 		  		[username, listname, payload.imdb_ID], function(err, result) {
-		    	//call `done()` to release the client back to the pool
 		    	if(err) {
 		      		return console.error('error running query', err);
 		    	}
@@ -179,7 +182,6 @@ server.route({
 	method: 'POST',
 	path: '/user',
 	handler: function (request, reply) {
-		//TODO JOIN users and tokens and check if payload has duplicate values
 		const hash = crypto.createHash('md5');
 		var payload = request.payload;
 		var htoken;
@@ -217,12 +219,10 @@ server.route({
 	  					client.query('INSERT INTO tokens(token_hash, username) values($1, $2)', 
 	  						[htoken, payload.username]);
 		  				return reply("Account created, check your email for your token!");
-		  				//TODO SEND EMAIL HERE
 		  			}
 		  			console.log(token);
 		  			done();
 	  			});
-				//put hashed token in redis store, email token to address provided
 			});
 		});
 	}
@@ -240,13 +240,11 @@ server.route({
 		    	return console.error('error fetching client from pool', err);
 		  	}
 		  	client.query('SELECT list_name FROM film_lists WHERE username = $1 GROUP BY list_name', [username], function(err, result) {
-		    	//call `done()` to release the client back to the pool
-		    	done();
-
 		    	if(err) {
 		      		return console.error('error running query', err);
 		    	}
 		    	reply(result.rows);
+				done();
 			});
 		});
 	}
@@ -266,12 +264,11 @@ server.route({
 		    	return console.error('error fetching client from pool', err);
 		  	}
 		  	client.query('SELECT imdb_ID FROM film_lists WHERE username = $1 AND list_name = $2', [username, listname], function(err, result) {
-		    	//call `done()` to release the client back to the pool
-		    	done();
 		    	if(err) {
 		      		return console.error('error running query', err);
 		    	}
 		    	reply(result.rows);
+		    	done();
 			});
 		});
 	}
@@ -283,7 +280,6 @@ server.route({
 	method: 'POST',
 	path: '/lists/{username}',
 	handler: function (request, reply) {
-		//Go to Redis for rate limiting stuff
 		const authorization = request.query.token;
 		console.log(authorization.length);
 		const username = encodeURIComponent(request.params.username);
@@ -309,7 +305,6 @@ server.route({
 	method: 'DELETE',
 	path: '/lists/{username}/{listname}/{imdb_ID}',
 	handler: function(request, reply) {
-		//DO AUTH
 		const username = encodeURIComponent(request.params.username);
 		const listname = encodeURIComponent(request.params.listname);
 		const imdb_ID = encodeURIComponent(request.params.imdb_ID);
@@ -323,7 +318,6 @@ server.route({
 	method: 'DELETE',
 	path: '/lists/{username}/{listname}',
 	handler: function(request, reply) {
-		//DO AUTH
 		const username = encodeURIComponent(request.params.username);
 		const listname = encodeURIComponent(request.params.listname);
 		const authorization = request.query.token;
@@ -348,8 +342,8 @@ server.route({
 });
 
 server.register({
-  register: require('hapi-require-https'),
-  options: {}
+  	register: require('hapi-require-https'),
+  	options: {}
 });
 
 server.start((err) => {
