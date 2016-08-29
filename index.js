@@ -216,9 +216,11 @@ server.route({
 		  					[payload.username, payload.email]);
 	  					client.query('INSERT INTO tokens(token_hash, username) values($1, $2)', 
 	  						[htoken, payload.username]);
-		  				return reply("Account created, check your email for your token!");
+	  					return reply({
+		  					message: "User and token created successfully, please store your token safely as it cannot be recovered",
+		  					token: token
+		  				});
 		  			}
-		  			return reply(token);
 		  			done();
 	  			});
 			});
@@ -292,7 +294,9 @@ server.route({
 	handler: function(request, reply) {
 		const username = encodeURIComponent(request.params.username);
 		const listname = encodeURIComponent(request.params.listname);
+		const imdb_ID = request.query.imdb_ID;
 		const authorization = request.query.token;
+		console.log(request.query);
 		var payload = request.payload;
 		verify(authorization, username, addFilm, listname, payload, reply);
 	}
