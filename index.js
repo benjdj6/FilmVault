@@ -22,11 +22,11 @@ redis_client.on("error", function (err) {
 const server = new Hapi.Server();
 server.connection({
 	port: 3000,
-	/**tls: {
-		key: fs.readFileSync(path.join(__dirname, 'tls/ssl/filmvault.pem'), 'utf8'),
-		cert: fs.readFileSync(path.join(__dirname, 'tls/certs/filmvaultcert.pem'), 'utf8'),
+	tls: {
+		key: fs.readFileSync(path.join(__dirname, 'filmvault.key'), 'utf8'),
+		cert: fs.readFileSync(path.join(__dirname, 'filmvault.crt'), 'utf8'),
 		rejectUnauthorized: false
-  	}**/
+  	}
 });
 
 function genToken() {
@@ -91,7 +91,6 @@ function verify(token, username, callback) {
 
 //Checks if list exists, if not creates list using username and data in payload
 function makeList(target, writer, payload, reply) {
-  	var responseStr = "";
   	pool.connect(function(err, client, done) {
 		if(err) {
 	    	return console.error('error fetching client from pool', err);
@@ -105,14 +104,13 @@ function makeList(target, writer, payload, reply) {
 		    	return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
 		    }
 	  		else if(result.rows[0]) {
-	    		responseStr = "List " + payload.listname + " already exists";
+	    		return reply("List " + payload.listname + " already exists");
 	    	}
 	    	else {
 				client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
 					[target, payload.listname, payload.imdb_ID]);
-				responseStr = payload.listname + " successfully created containing " + payload.imdb_ID;
+				return reply(payload.listname + " successfully created containing " + payload.imdb_ID);
 			}
-			reply(responseStr);
 		});
 		done();
   	});
@@ -220,7 +218,7 @@ server.route({
 	  						[htoken, payload.username]);
 		  				return reply("Account created, check your email for your token!");
 		  			}
-		  			console.log(token);
+		  			return reply(token);
 		  			done();
 	  			});
 			});
@@ -281,7 +279,6 @@ server.route({
 	path: '/lists/{username}',
 	handler: function (request, reply) {
 		const authorization = request.query.token;
-		console.log(authorization.length);
 		const username = encodeURIComponent(request.params.username);
 		var payload = request.payload;
 		verify(authorization, username, makeList, payload, reply);
