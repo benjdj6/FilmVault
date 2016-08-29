@@ -49,10 +49,9 @@ function genToken() {
 }
 
 //Hashes token, finds it in Redis and identifies user
-function verify(token, username, callback) {
+function verify(token, username, reply, callback) {
 	const hash = crypto.createHash('md5');
  	var args = arguments;
- 	var reply = args[4];
   	var ts = (new Date).getTime();
   	var htoken;
   	hash.update(token);
@@ -76,7 +75,7 @@ function verify(token, username, callback) {
 					      	return console.error('error running query', err);
 					    }
 				  		if(result.rows[0]) {
-				  			callback(username, result.rows[0].username, args[3], args[4], args[5]);
+				  			callback(username, result.rows[0].username, reply, args[4], args[5]);
 				    	}
 				    	else {
 							return reply(Boom.unauthorized("Invalid Token Provided"));
@@ -90,7 +89,7 @@ function verify(token, username, callback) {
 }
 
 //Checks if list exists, if not creates list using username and data in payload
-function makeList(target, writer, payload, reply) {
+function makeList(target, writer, reply, payload) {
   	pool.connect(function(err, client, done) {
 		if(err) {
 	    	return console.error('error fetching client from pool', err);
@@ -116,7 +115,7 @@ function makeList(target, writer, payload, reply) {
   	});
 }
 
-function addFilm(target, writer, listname, payload, reply) {
+function addFilm(target, writer, reply, listname, imdb_ID) {
 	pool.connect(function(err, client, done) {
 	  	if(err) {
 	    	return console.error('error fetching client from pool', err);
@@ -126,16 +125,16 @@ function addFilm(target, writer, listname, payload, reply) {
 	  	}
 	  	else {
 		  	client.query('SELECT * FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', 
-		  		[username, listname, payload.imdb_ID], function(err, result) {
+		  		[target, listname, imdb_ID], function(err, result) {
 		    	if(err) {
 		      		return console.error('error running query', err);
 		    	}
 		    	if(result.rows[0]) {
-		    		responseStr = "Movie: " + payload.imdb_ID + " already exists in list " + listname;
+		    		return reply("Movie: " + imdb_ID + " already exists in list " + listname);
 		    	}
 		    	else {
 		    		client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
-						[username, listname, payload.imdb_ID]);
+						[target, listname, imdb_ID]);
 		    		return reply(imdb_ID + " successfully added to list " + listname);
 		    	}
 			});
@@ -144,7 +143,7 @@ function addFilm(target, writer, listname, payload, reply) {
 	});
 }
 
-function deleteList(target, username, listname, reply) {
+function deleteList(target, writer, reply, listname) {
 	pool.connect(function(err, client, done) {
 	  	if(err) {
 	    	return console.error('error fetching client from pool', err);
@@ -154,14 +153,14 @@ function deleteList(target, username, listname, reply) {
 			return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
 		}
 		else {
-			client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2', [username, listname]);
-			reply("Film List " + listname + " Successfully Deleted");
+			client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2', [target, listname]);
+			return reply("Film List " + listname + " Successfully Deleted");
 			done();
 		}
 	});
 }
 
-function deleteFilm(target, writer, listname, movie, reply) {
+function deleteFilm(target, writer, reply, listname, imdb_ID) {
 	pool.connect(function(err, client, done) {
 	  	if(err) {
 	    	return console.error('error fetching client from pool', err);
@@ -169,8 +168,8 @@ function deleteFilm(target, writer, listname, movie, reply) {
 	  	if(target != writer) {
 		    return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
 		}
-		client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', [username, listname, imdb_ID]);
-		reply("Film " + imdb_ID + " Successfully Deleted From " + listname);
+		client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', [target, listname, imdb_ID]);
+		return reply("Film " + imdb_ID + " Successfully Deleted From " + listname);
 		done();
 	});
 }
@@ -267,7 +266,7 @@ server.route({
 		    	if(err) {
 		      		return console.error('error running query', err);
 		    	}
-		    	reply(result.rows);
+		    	return reply(result.rows);
 		    	done();
 			});
 		});
@@ -283,7 +282,7 @@ server.route({
 		const authorization = request.query.token;
 		const username = encodeURIComponent(request.params.username);
 		var payload = request.payload;
-		verify(authorization, username, makeList, payload, reply);
+		verify(authorization, username, reply, makeList, payload);
 	}
 });
 
@@ -296,12 +295,11 @@ server.route({
 		const listname = encodeURIComponent(request.params.listname);
 		const imdb_ID = request.query.imdb_ID;
 		const authorization = request.query.token;
-		console.log(request.query);
-		var payload = request.payload;
-		verify(authorization, username, addFilm, listname, payload, reply);
+		verify(authorization, username, reply, addFilm, listname, imdb_ID);
 	}
-});
+}); 
 
+//Delete a film from a film list
 server.route({
 	method: 'DELETE',
 	path: '/lists/{username}/{listname}/{imdb_ID}',
@@ -310,7 +308,7 @@ server.route({
 		const listname = encodeURIComponent(request.params.listname);
 		const imdb_ID = encodeURIComponent(request.params.imdb_ID);
 		const authorization = request.query.token;
-		verify(authorization, username, deleteFilm, listname, imdb_ID, reply);
+		verify(authorization, username, reply, deleteFilm, listname, imdb_ID);
 	}
 });
 
@@ -322,7 +320,7 @@ server.route({
 		const username = encodeURIComponent(request.params.username);
 		const listname = encodeURIComponent(request.params.listname);
 		const authorization = request.query.token;
-		verify(authorization, username, deleteList, listname, reply);
+		verify(authorization, username, reply, deleteList, listname);
 	}
 });
 

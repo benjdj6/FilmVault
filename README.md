@@ -3,18 +3,15 @@ How To Use
 *COMING SOON*
 Working
 =======
-Verification of writer/user for *makeList*, *deleteFilm*, *deleteList*
+Verification of writer/user for *makeList*, *addFilm*, *deleteFilm*, *deleteList*
+
+All endpoints currently working
 Not Working
 ===========
 Token duplicate check is slow
 
-PUT film is currently not working, query parameters being lost
 To Do (1-most severe 5-least severe)
 ====================================
-Restructure Reply callback passing to verify - Sev 1
-
-Fix PUT film - Sev 1
-
 Fix responses to all be JSON - Sev 2
 
 Deploy to AWS - Sev 2
