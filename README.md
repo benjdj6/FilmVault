@@ -15,8 +15,6 @@ To Do (1-most severe 5-least severe)
 ====================================
 Send token - Sev 1
 
-Connect HTTPS certs - Sev 2
-
 Fix responses to all be JSON - Sev 2
 
 Deploy to AWS - Sev 2
