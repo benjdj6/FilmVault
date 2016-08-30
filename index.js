@@ -10,10 +10,10 @@ const Boom = require('boom');
 const fs = require('fs');
 const path = require('path');
 
-var client = new pg.Client();
-var pool = new pg.Pool(config);
+let client = new pg.Client();
+let pool = new pg.Pool(config);
 
-var redis_client = redis.createClient();
+let redis_client = redis.createClient();
 
 redis_client.on("error", function (err) {
     console.log("Error " + err);
@@ -31,9 +31,9 @@ server.connection({
 
 function genToken() {
 	const hash = crypto.createHash('md5');
-	var htoken;
+	let htoken;
 	crypto.randomBytes(48, function(err, buffer) {
-		var token = buffer.toString('hex');
+		let token = buffer.toString('hex');
 		hash.update(token);
 		htoken = hash.digest('hex');
 		client.query('SELECT * FROM tokens WHERE token_hash = $1', [htoken], function(err, result) {
@@ -51,9 +51,9 @@ function genToken() {
 //Hashes token, finds it in Redis and identifies user
 function verify(token, username, reply, callback) {
 	const hash = crypto.createHash('md5');
- 	var args = arguments;
-  	var ts = (new Date).getTime();
-  	var htoken;
+ 	let args = arguments;
+  	let ts = (new Date).getTime();
+  	let htoken;
   	hash.update(token);
   	htoken = hash.digest('hex');
   	redis_client.get(htoken, function(err, replies) {
@@ -61,7 +61,7 @@ function verify(token, username, reply, callback) {
   			return reply(Boom.tooManyRequests("You are making too many requests, please try again in a couple seconds."));
   		}
   		else {
-  			var multi = redis_client.multi();
+  			let multi = redis_client.multi();
   			multi.incr(htoken, redis.print);
   			multi.expire(htoken, 10);
   			multi.exec(function(err, replies) {
@@ -180,10 +180,10 @@ server.route({
 	path: '/user',
 	handler: function (request, reply) {
 		const hash = crypto.createHash('md5');
-		var payload = request.payload;
-		var htoken;
+		let payload = request.payload;
+		let htoken;
 		crypto.randomBytes(24, function(err, buffer) {
-			var token = buffer.toString('hex');
+			let token = buffer.toString('hex');
 			hash.update(token);
 			htoken = hash.digest('hex');
 			pool.connect(function(err, client, done) {
@@ -196,7 +196,7 @@ server.route({
 		      			return console.error('error running query', err);
 		    		}
 		  			if(result.rows[0]) {
-		  				var data = result.rows[0]
+		  				let data = result.rows[0]
 		  				if(data.username == payload.username && data.email == payload.email) {
 		  					return reply(Boom.conflict("Username and Email already in use. Please try another!"));
 		  				}
@@ -281,7 +281,7 @@ server.route({
 	handler: function (request, reply) {
 		const authorization = request.query.token;
 		const username = encodeURIComponent(request.params.username);
-		var payload = request.payload;
+		let payload = request.payload;
 		verify(authorization, username, reply, makeList, payload);
 	}
 });
@@ -331,7 +331,7 @@ server.route({
 	handler: function (request, reply) {
 		const year = request.params.year ? encodeURIComponent(request.params.year) : '';
 		const title = encodeURIComponent(request.params.title);
-		var reqString = 'https://www.omdbapi.com/?t=' + title + '/' + year;
+		let reqString = 'https://www.omdbapi.com/?t=' + title + '/' + year;
 		req(reqString, function (error, response, body) {
 			if (!error && response.statusCode == 200) {
     			reply(body);
