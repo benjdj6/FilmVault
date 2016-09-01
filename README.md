@@ -12,11 +12,15 @@ Token duplicate check is slow
 
 To Do (1-most severe 5-least severe)
 ====================================
+Change end point paths to be cleaner/more intuitive - Sev 2
+
 Fix responses to all be JSON - Sev 2
 
 Deploy to AWS - Sev 2
 
 Token duplicate check callback restructure - Sev 4
+
+Cleanup callbacks - Sev 4
 
 Clean up comments - Sev 5
 
