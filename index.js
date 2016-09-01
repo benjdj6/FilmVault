@@ -177,7 +177,7 @@ function deleteFilm(target, writer, reply, listname, imdb_ID) {
 //Create a new user
 server.route({
 	method: 'POST',
-	path: '/user',
+	path: '/users',
 	handler: function (request, reply) {
 		const hash = crypto.createHash('md5');
 		let payload = request.payload;
@@ -231,7 +231,7 @@ server.route({
 //TODO Auth
 server.route({
 	method: 'GET',
-	path: '/lists/{username}',
+	path: '/users/{username}/lists',
 	handler: function (request, reply) {
 		const username = encodeURIComponent(request.params.username);
 		pool.connect(function(err, client, done) {
@@ -253,7 +253,7 @@ server.route({
 //TODO Auth
 server.route({
 	method: 'GET',
-	path: '/lists/{username}/{listname}',
+	path: '/users/{username}/lists/{listname}',
 	handler: function (request, reply) {
 		//TODO check redis
 		const username = encodeURIComponent(request.params.username);
@@ -266,6 +266,9 @@ server.route({
 		    	if(err) {
 		      		return console.error('error running query', err);
 		    	}
+		    	if(result.rows.length < 1) {
+		    		return reply(Boom.notFound("List not found"));
+		    	}
 		    	return reply(result.rows);
 		    	done();
 			});
@@ -277,7 +280,7 @@ server.route({
 //Lists must have at least one entry to exist
 server.route({
 	method: 'POST',
-	path: '/lists/{username}',
+	path: '/users/{username}/lists',
 	handler: function (request, reply) {
 		const authorization = request.query.token;
 		const username = encodeURIComponent(request.params.username);
@@ -289,7 +292,7 @@ server.route({
 //Add film to existing film list
 server.route({
 	method: 'PUT',
-	path: '/lists/{username}/{listname}',
+	path: '/users/{username}/lists/{listname}',
 	handler: function(request, reply) {
 		const username = encodeURIComponent(request.params.username);
 		const listname = encodeURIComponent(request.params.listname);
@@ -302,7 +305,7 @@ server.route({
 //Delete a film from a film list
 server.route({
 	method: 'DELETE',
-	path: '/lists/{username}/{listname}/{imdb_ID}',
+	path: '/users/{username}/lists/{listname}/{imdb_ID}',
 	handler: function(request, reply) {
 		const username = encodeURIComponent(request.params.username);
 		const listname = encodeURIComponent(request.params.listname);
@@ -315,7 +318,7 @@ server.route({
 //Delete a film list
 server.route({
 	method: 'DELETE',
-	path: '/lists/{username}/{listname}',
+	path: '/users/{username}/lists/{listname}',
 	handler: function(request, reply) {
 		const username = encodeURIComponent(request.params.username);
 		const listname = encodeURIComponent(request.params.listname);
