@@ -103,12 +103,13 @@ function makeList(target, writer, reply, payload) {
 		    	return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
 		    }
 	  		else if(result.rows[0]) {
-	    		return reply("List " + payload.listname + " already exists");
+	    		return reply(Boom.conflict("List " + payload.listname + " already exists"));
 	    	}
 	    	else {
 				client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
 					[target, payload.listname, payload.imdb_ID]);
-				return reply(payload.listname + " successfully created containing " + payload.imdb_ID);
+				let respMsg = payload.listname + " successfully created containing " + payload.imdb_ID;
+				return reply({"message": respMsg});
 			}
 		});
 		done();
@@ -130,12 +131,13 @@ function addFilm(target, writer, reply, listname, imdb_ID) {
 		      		return console.error('error running query', err);
 		    	}
 		    	if(result.rows[0]) {
-		    		return reply("Movie: " + imdb_ID + " already exists in list " + listname);
+		    		return reply(Boom.conflict("Movie: " + imdb_ID + " already exists in list " + listname));
 		    	}
 		    	else {
 		    		client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
 						[target, listname, imdb_ID]);
-		    		return reply(imdb_ID + " successfully added to list " + listname);
+		    		let respMsg = imdb_ID + " successfully added to list " + listname;
+		    		return reply({"message": respMsg});
 		    	}
 			});
 		}
@@ -154,7 +156,8 @@ function deleteList(target, writer, reply, listname) {
 		}
 		else {
 			client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2', [target, listname]);
-			return reply("Film List " + listname + " Successfully Deleted");
+			let respMsg = "Film List " + listname + " Successfully Deleted";
+			return reply({"message": respMsg});
 			done();
 		}
 	});
@@ -169,7 +172,8 @@ function deleteFilm(target, writer, reply, listname, imdb_ID) {
 		    return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
 		}
 		client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', [target, listname, imdb_ID]);
-		return reply("Film " + imdb_ID + " Successfully Deleted From " + listname);
+		let respMsg = "Film " + imdb_ID + " Successfully Deleted From " + listname;
+		return reply({"message": respMsg});
 		done();
 	});
 }
@@ -242,7 +246,7 @@ server.route({
 		    	if(err) {
 		      		return console.error('error running query', err);
 		    	}
-		    	reply(result.rows);
+		    	reply({"lists": result.rows});
 				done();
 			});
 		});
@@ -269,7 +273,7 @@ server.route({
 		    	if(result.rows.length < 1) {
 		    		return reply(Boom.notFound("List not found"));
 		    	}
-		    	return reply(result.rows);
+		    	return reply({"films": result.rows});
 		    	done();
 			});
 		});
