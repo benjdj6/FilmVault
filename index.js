@@ -29,7 +29,7 @@ server.connection({
   	}
 });
 
-function genToken() {
+function genToken(reply) {
 	const hash = crypto.createHash('md5');
 	let htoken;
 	crypto.randomBytes(48, function(err, buffer) {
@@ -41,10 +41,20 @@ function genToken() {
       			return console.error('error running query', err);
     		}
   			if(result.rows[0]) {
-  				htoken = genToken();
+  				genToken(reply);
   			}
+  			else {
+  				client.query('INSERT INTO users(username, email) values($1, $2)', 
+		  			[payload.username, payload.email]);
+	  			client.query('INSERT INTO tokens(token_hash, username) values($1, $2)', 
+	  				[htoken, payload.username]);
+	  			return reply({
+		  			message: "User and token created successfully, please store your token safely as it cannot be recovered",
+		  			token: token
+		  		});
+  			}
+  			done();
   		});
-		return htoken;
 	});
 }
 
@@ -57,7 +67,7 @@ function verify(token, username, reply, callback) {
   	hash.update(token);
   	htoken = hash.digest('hex');
   	redis_client.get(htoken, function(err, replies) {
-  		if(replies != NaN && replies > 15) {
+  		if(replies > 15) {
   			return reply(Boom.tooManyRequests("You are making too many requests, please try again in a couple seconds."));
   		}
   		else {
@@ -211,7 +221,7 @@ server.route({
 		  					return reply(Boom.conflict("Email already in use. Please try another!"));
 		  				}
 		  				else if(data.token_hash == htoken) {
-		  					htoken = genToken();
+		  					genToken(reply);
 		  				}
 		  			}
 		  			else {
