@@ -60,21 +60,27 @@ function genToken(reply) {
 
 //Hashes token, finds it in Redis and identifies user
 function verify(token, username, reply, callback) {
+	//Creates hash object with crypto to be used when hashing the token
 	const hash = crypto.createHash('md5');
  	let args = arguments;
   	let ts = (new Date).getTime();
   	let htoken;
   	hash.update(token);
   	htoken = hash.digest('hex');
+  	//Call GET htoken on redis for rate-limiting
   	redis_client.get(htoken, function(err, replies) {
+  		//If more than 15 calls in the last 10 seconds return relevant 400 response
   		if(replies > 15) {
   			return reply(Boom.tooManyRequests("You are making too many requests, please try again in a couple seconds."));
   		}
   		else {
+  			//Do REDIS multi to incriment the value for htoken and set an expiration for 10 seconds
   			let multi = redis_client.multi();
   			multi.incr(htoken, redis.print);
   			multi.expire(htoken, 10);
   			multi.exec(function(err, replies) {
+  				//After executing the multi connect to database and retrieve the username of the client
+  				//and pass to callback function parameter from verify
   				pool.connect(function(err, client, done) {
 					if(err) {
     					return console.error('error fetching client from pool', err);
@@ -98,8 +104,12 @@ function verify(token, username, reply, callback) {
  	});
 }
 
-//Checks if list exists, if not creates list using username and data in payload
+//Create a new film list for a user
 function makeList(target, writer, reply, payload) {
+	//Check if target and writer are the same person, if not return forbidden
+	if(target != writer) {
+    	return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
+    }	
   	pool.connect(function(err, client, done) {
 		if(err) {
 	    	return console.error('error fetching client from pool', err);
@@ -109,13 +119,12 @@ function makeList(target, writer, reply, payload) {
 		    if(err) {
 		      	return console.error('error running query', err);
 		    }
-		    if(target != writer) {
-		    	return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
-		    }
 	  		else if(result.rows[0]) {
+	  			//If the query has a result then the list already exists on the table and returns conflict
 	    		return reply(Boom.conflict("List " + payload.listname + " already exists"));
 	    	}
 	    	else {
+	    		//Insert new lest with movie into table and return 200 with appropriate message
 				client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
 					[target, payload.listname, payload.imdb_ID]);
 				let respMsg = payload.listname + " successfully created containing " + payload.imdb_ID;
@@ -126,15 +135,19 @@ function makeList(target, writer, reply, payload) {
   	});
 }
 
+
+//Add a film to an existing film list
 function addFilm(target, writer, reply, listname, imdb_ID) {
+	//Check if target and writer are the same person, if not return forbidden
+  	if(target != writer) {
+  		return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
+  	}
 	pool.connect(function(err, client, done) {
 	  	if(err) {
 	    	return console.error('error fetching client from pool', err);
 	  	}
-	  	if(target != writer) {
-	  		return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
-	  	}
 	  	else {
+	  		//Check if film already exists on user specified list
 		  	client.query('SELECT * FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', 
 		  		[target, listname, imdb_ID], function(err, result) {
 		    	if(err) {
@@ -144,6 +157,7 @@ function addFilm(target, writer, reply, listname, imdb_ID) {
 		    		return reply(Boom.conflict("Movie: " + imdb_ID + " already exists in list " + listname));
 		    	}
 		    	else {
+		    		//Insert film into list and send 200 response with appropriate message
 		    		client.query('INSERT INTO film_lists(username, list_name, imdb_ID) values($1, $2, $3)', 
 						[target, listname, imdb_ID]);
 		    		let respMsg = imdb_ID + " successfully added to list " + listname;
@@ -155,32 +169,35 @@ function addFilm(target, writer, reply, listname, imdb_ID) {
 	});
 }
 
+//Delete a user's film list
 function deleteList(target, writer, reply, listname) {
+	//Check if target and writer are the same person, if not return forbidden
+	if(target != writer) {
+		return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
+	}
 	pool.connect(function(err, client, done) {
 	  	if(err) {
 	    	return console.error('error fetching client from pool', err);
 	  	}
-	  	if(target != writer) {
-	  		done();
-			return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
-		}
 		else {
 			client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2', [target, listname]);
 			let respMsg = "Film List " + listname + " Successfully Deleted";
 			return reply({"message": respMsg});
-			done();
 		}
+		done();
 	});
 }
 
+//Delete film from and existing film list
 function deleteFilm(target, writer, reply, listname, imdb_ID) {
+	//Check if target and writer are the same person, if not return forbidden
+	if(target != writer) {
+	    return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
+	}
 	pool.connect(function(err, client, done) {
 	  	if(err) {
 	    	return console.error('error fetching client from pool', err);
 	  	}
-	  	if(target != writer) {
-		    return reply(Boom.forbidden('You do not have permission to modify ' + target + '\'s lists'));
-		}
 		client.query('DELETE FROM film_lists WHERE username = $1 AND list_name = $2 AND imdb_ID = $3', [target, listname, imdb_ID]);
 		let respMsg = "Film " + imdb_ID + " Successfully Deleted From " + listname;
 		return reply({"message": respMsg});

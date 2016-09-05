@@ -8,10 +8,15 @@ Verification of writer/user for *makeList*, *addFilm*, *deleteFilm*, *deleteList
 All endpoints currently working
 Not Working
 ===========
+*All Good For Now!*
 
 To Do (1-most severe 5-least severe)
 ====================================
 Deploy to AWS - Sev 2
+
+Write Proper Tests - Sev 2
+
+Auth on GET endpoints - Sev 2
 
 Cleanup async - Sev 4
 
