@@ -16,7 +16,7 @@ Deploy to AWS - Sev 2
 
 Write Proper Tests - Sev 2
 
-Auth on GET endpoints - Sev 2
+Rate limit on GET endpoints - Sev 2
 
 Cleanup async - Sev 4
 
