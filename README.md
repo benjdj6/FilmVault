@@ -58,8 +58,8 @@ Not Working
 ===========
 *All Good For Now!*
 
-To Do (1-most severe 5-least severe)
-====================================
+To Do
+======
 Rate limit on GET endpoints
 
 Cleanup async
