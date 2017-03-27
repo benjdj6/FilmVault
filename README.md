@@ -1,48 +1,48 @@
 How To Use
 ==========
-####Create a user
+#### Create a user
 
 >curl -H "Content-Type: application/json" -X POST -d '{"username":{$USERNAME},"email":{$EMAIL}}' https://localhost:3000/users
 
 Returns a token associated to user, this token is not recoverable so be sure to keep somewhere safe
 
-####Get a user's film lists
+#### Get a user's film lists
 
 >curl https://localhost:3000/users/{$USERNAME}/lists
 
 Returns a list of list names associated with specified user
 
-####Get films on a user's list
+#### Get films on a user's list
 
 >curl https://localhost:3000/users/{$USERNAME}/lists/{$USERNAME}
 
 Returns a list of imdb_IDs contained on the specified list owned by specified user
 
-####Create a new list
+#### Create a new list
 
 >curl -H "Content-Type: application/json" -X POST -d '{"listname":{$LISTNAME},"imdb_ID":{$IMDB_ID}}' https://localhost:3000/users/{$USERNAME}/lists?token={$TOKEN}
 
 Creates a new list called {$LISTNAME} with first entry as {$IMDB_ID} owned by user {$USERNAME}
 
-####Add a movie to a list
+#### Add a movie to a list
 
 >curl -X PUT https://localhost:3000/users/{$USERNAME}/lists/{$LISTNAME}?imdb_ID={$IMDB_ID}&token={$TOKEN}
 
 Adds movie {$IMDB_ID} to list {$LISTNAME} owned by user {$USERNAME}
 
-####Delete a movie from a list
+#### Delete a movie from a list
 
 >curl -X DELETE https://localhost:3000/users/{$USERNAME}/lists/{$LISTNAME}/{$IMDB_ID}?token={$TOKEN}
 
 Deletes movie {$IMDB_ID} from list {$LISTNAME} owned by user {$USERNAME}
 
-####Delete a user's list
+#### Delete a user's list
 
 >curl -X PUT https://localhost:3000/users/{$USERNAME}/lists/{$LISTNAME}?token={$TOKEN}
 
 Deletes list {$LISTNAME} owned by user {$USERNAME}
 
-####Get movie info
+#### Get movie info
 
 >curl https://localhost:3000/movie/{$TITLE}/{$YEAR?}
 
